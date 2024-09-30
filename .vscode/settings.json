@@ -3,5 +3,8 @@
   "editor.formatOnSave": true,
   "cSpell.words": [
     "glfw"
-  ]
+  ],
+  "files.associations": {
+    "iostream": "cpp"
+  }
 }

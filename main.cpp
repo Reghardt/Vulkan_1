@@ -9,6 +9,8 @@
 // provides EXIT_SUCCESS and EXIT_FAILURE macros
 #include <cstdlib>
 
+#include <vector>
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
@@ -40,6 +42,7 @@ private:
 
     void initVulkan()
     {
+        createInstance();
     }
 
     void mainLoop()
@@ -54,11 +57,72 @@ private:
     void cleanup()
     {
         // cleanup resources and terminate glfw
+        vkDestroyInstance(instance, nullptr);
         glfwDestroyWindow(window);
         glfwTerminate();
     }
 
+    void createInstance()
+    {
+
+        // SECTION: Checking for extension support
+        // this section is purely to print a list of available extensions, it is not required for functionality
+        uint32_t extensionCount = 0;
+        // request number of extensions and store in extensionCount, the last param should be nullptr for getting the count only
+        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+        // allocate array to hold extension details
+        std::vector<VkExtensionProperties> extensions(extensionCount);
+        // query extension details
+        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+
+        // list extension
+        std::cout << "available extensions:\n";
+        for (const auto &extension : extensions)
+        {
+            std::cout << '\t' << extension.extensionName << '\n';
+        }
+        // END SECTION
+
+        // optional struct
+        VkApplicationInfo appInfo{}; // brace initialization
+        // fill struct with info
+        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pApplicationName = "Hello Triangle";
+        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.pEngineName = "No Engine";
+        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.apiVersion = VK_API_VERSION_1_0;
+
+        // important struct that tells the Vulkan driver which global extensions and validation layers we want to use.
+        // Global meaning th entire program and not a specific device
+        VkInstanceCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        createInfo.pApplicationInfo = &appInfo;
+
+        // vulkan is platform agnostic which means an extention is required to interface with the window  system.
+        // GLFW has a built in function that returns the extensions required which is passed to the struct
+        uint32_t glfwExtensionCount = 0;
+        const char **glfwExtensions;
+
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        createInfo.enabledExtensionCount = glfwExtensionCount;
+        createInfo.ppEnabledExtensionNames = glfwExtensions;
+        createInfo.enabledLayerCount = 0;
+
+        // Vulkan now has everything needed to create an instance:
+        // 1: Pointer to struct with creation info
+        // 2: Pointer to custom allocator callbacks, always nullptr in this tut
+        // 3: Pointer to var that stores the handle to the new object
+        // Nearly all vulkan funcs return a value of VkResult
+        // VkResult is either VK_SUCCESS or an error code
+        if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create instance!");
+        }
+    }
+
     GLFWwindow *window;
+    VkInstance instance;
 };
 
 int main()
