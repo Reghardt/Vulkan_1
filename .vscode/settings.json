@@ -2,7 +2,8 @@
   "editor.defaultFormatter": "ms-vscode.cpptools",
   "editor.formatOnSave": true,
   "cSpell.words": [
-    "glfw"
+    "glfw",
+    "VKAPI"
   ],
   "files.associations": {
     "iostream": "cpp"
