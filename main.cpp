@@ -10,9 +10,19 @@
 #include <cstdlib>
 
 #include <vector>
+#include <cstring>
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+
+const std::vector<const char *> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"};
+
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
 
 class HelloTriangleApplication
 {
@@ -65,6 +75,11 @@ private:
     void createInstance()
     {
 
+        if (enableValidationLayers && !checkValidationLayerSupport())
+        {
+            throw std::runtime_error("validation layers requested, but not available!");
+        }
+
         // SECTION: Checking for extension support
         // this section is purely to print a list of available extensions, it is not required for functionality
         uint32_t extensionCount = 0;
@@ -72,7 +87,7 @@ private:
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
         // allocate array to hold extension details
         std::vector<VkExtensionProperties> extensions(extensionCount);
-        // query extension details
+        // query extension details, put in extensions
         vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
         // list extension
@@ -107,7 +122,17 @@ private:
         glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         createInfo.enabledExtensionCount = glfwExtensionCount;
         createInfo.ppEnabledExtensionNames = glfwExtensions;
-        createInfo.enabledLayerCount = 0;
+
+        // include validation layer names
+        if (enableValidationLayers)
+        {
+            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+            createInfo.ppEnabledLayerNames = validationLayers.data();
+        }
+        else
+        {
+            createInfo.enabledLayerCount = 0;
+        }
 
         // Vulkan now has everything needed to create an instance:
         // 1: Pointer to struct with creation info
@@ -119,6 +144,38 @@ private:
         {
             throw std::runtime_error("failed to create instance!");
         }
+    }
+
+    bool checkValidationLayerSupport()
+    {
+        uint32_t layerCount = 0;
+        // get layer count, 2nd params should be nullptr
+        vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+        std::vector<VkLayerProperties> availableLayers(layerCount);
+        // put layers in availableLayers
+        vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+        // check if all layers in validationLayers exist in the availableLayers list
+        for (const char *layerName : validationLayers)
+        {
+            bool layerFound = false;
+            for (const auto &layerProperties : availableLayers)
+            {
+                if (strcmp(layerName, layerProperties.layerName) == 0)
+                {
+                    layerFound = true;
+                    break;
+                }
+            }
+
+            if (!layerFound)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     GLFWwindow *window;
