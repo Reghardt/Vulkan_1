@@ -50,6 +50,16 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
     }
 }
 
+struct QueueFamilyIndices
+{
+    std::optional<uint32_t> graphicsFamily;
+
+    bool isComplete()
+    {
+        return graphicsFamily.has_value();
+    }
+};
+
 class HelloTriangleApplication
 {
 public:
@@ -62,6 +72,13 @@ public:
     }
 
 private:
+    GLFWwindow *window;
+    VkInstance instance;
+    VkDebugUtilsMessengerEXT debugMessenger;
+    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    VkDevice device;
+    VkQueue graphicsQueue;
+
     void initWindow()
     {
         // initializes GLFW library
@@ -173,22 +190,23 @@ private:
         if (deviceCount == 0)
         {
             throw std::runtime_error("failed to find GPUs with vulkan support!");
-            std::vector<VkPhysicalDevice> devices(deviceCount);
-            vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+        }
 
-            for (const auto &device : devices)
-            {
-                if (isDeviceSuitable(device))
-                {
-                    physicalDevice = device;
-                    break;
-                }
-            }
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-            if (physicalDevice == VK_NULL_HANDLE)
+        for (const auto &device : devices)
+        {
+            if (isDeviceSuitable(device))
             {
-                throw std::runtime_error("failed to find a suitable GPU!");
+                physicalDevice = device;
+                break;
             }
+        }
+
+        if (physicalDevice == VK_NULL_HANDLE)
+        {
+            throw std::runtime_error("failed to find a suitable GPU!");
         }
     }
 
@@ -217,7 +235,7 @@ private:
         if (enableValidationLayers)
         {
             createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledExtensionNames = validationLayers.data();
+            createInfo.ppEnabledLayerNames = validationLayers.data();
         }
         else
         {
@@ -228,6 +246,8 @@ private:
         {
             throw std::runtime_error("failed to create logical device!");
         }
+
+        vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
     }
 
     // settle for any gpu
@@ -236,16 +256,6 @@ private:
         QueueFamilyIndices indices = findQueueFamilies(device);
         return indices.isComplete();
     }
-
-    struct QueueFamilyIndices
-    {
-        std::optional<uint32_t> graphicsFamily;
-
-        bool isComplete()
-        {
-            return graphicsFamily.has_value();
-        }
-    };
 
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
     {
@@ -274,6 +284,31 @@ private:
         }
 
         return indices;
+    }
+
+    // validation layers will print to std::cout by default
+    // but we can handle them ourselves by providing an explicit callback
+    // This enables which kind of messages to see, because not all are necessarily fatal
+    std::vector<const char *> getRequiredExtensions()
+    {
+
+        // vulkan is platform agnostic which means an extention is required to interface with the window  system.
+        // GLFW has a built in function that returns the extensions required which is passed to the struct
+        uint32_t glfwExtensionCount = 0;
+        const char **glfwExtensions;
+
+        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+        // range based constructor (start, end + one past the last array elem)
+        std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+        // the above GLFW extensions are always required bu the debug messenger extension is conditionally added
+        if (enableValidationLayers)
+        {
+            // Add VK_EXT_debug_utils (same as VK_EXT_DEBUG_UTILS_EXTENSION_NAME) extension
+            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
+
+        return extensions;
     }
 
     bool checkValidationLayerSupport()
@@ -308,31 +343,6 @@ private:
         return true;
     }
 
-    // validation layers will print to std::cout by default
-    // but we can handle them ourselves by providing an explicit callback
-    // This enables which kind of messages to see, because not all are necessarily fatal
-    std::vector<const char *> getRequiredExtensions()
-    {
-
-        // vulkan is platform agnostic which means an extention is required to interface with the window  system.
-        // GLFW has a built in function that returns the extensions required which is passed to the struct
-        uint32_t glfwExtensionCount = 0;
-        const char **glfwExtensions;
-
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        // range based constructor (start, end + one past the last array elem)
-        std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-        // the above GLFW extensions are always required bu the debug messenger extension is conditionally added
-        if (enableValidationLayers)
-        {
-            // Add VK_EXT_debug_utils (same as VK_EXT_DEBUG_UTILS_EXTENSION_NAME) extension
-            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        }
-
-        return extensions;
-    }
-
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -365,13 +375,6 @@ private:
             throw std::runtime_error("failed to set up debug messenger");
         }
     }
-
-    GLFWwindow *window;
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debugMessenger;
-    VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-    VkDevice device;
-    VkQueue graphicsQueue;
 };
 
 int main()
