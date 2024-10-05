@@ -3,6 +3,8 @@
   "editor.formatOnSave": true,
   "cSpell.words": [
     "glfw",
+    "Multisample",
+    "multisampling",
     "SWAPCHAIN",
     "VKAPI"
   ],
