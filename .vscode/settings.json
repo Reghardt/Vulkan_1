@@ -83,5 +83,12 @@
     "cinttypes": "cpp",
     "typeinfo": "cpp",
     "variant": "cpp"
-  }
+  },
+  "makefile.launchConfigurations": [
+    {
+      "cwd": "/home/reghardt/Documents/Development/Vulkan_1",
+      "binaryPath": "/home/reghardt/Documents/Development/Vulkan_1/VulkanTest",
+      "binaryArgs": []
+    }
+  ]
 }
